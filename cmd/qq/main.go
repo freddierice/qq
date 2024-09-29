@@ -10,6 +10,8 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+var conversationHistory []openai.ChatCompletionMessage
+
 func main() {
 	// Get API key and organization ID from environment variables
 	apiKey := os.Getenv("OPENAI_API_KEY")
@@ -39,13 +41,13 @@ func main() {
 	}
 
 	// If no command-line argument, enter interactive mode
-	fmt.Println("Welcome to the ChatGPT CLI tool!")
-	fmt.Println("Type your questions and press Enter. Type 'quit' to exit.")
-
+	fmt.Println("Ask away...")
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("> ")
-		scanner.Scan()
+		if !scanner.Scan() {
+			break
+		}
 		question := scanner.Text()
 
 		if strings.ToLower(question) == "quit" {
@@ -54,24 +56,32 @@ func main() {
 
 		askQuestion(client, question)
 	}
-
-	fmt.Println("Thank you for using the ChatGPT CLI tool. Goodbye!")
 }
 
 func askQuestion(client *openai.Client, question string) {
+
+	// Add the user's question to the conversation history
+	conversationHistory = append(conversationHistory, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: question,
+	})
+
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: openai.GPT4oLatest,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: question,
-				},
-			},
+			Model:     openai.GPT4oLatest,
+			Messages:  conversationHistory,
 			MaxTokens: 4096,
 		},
 	)
+
+	// Add the assistant's response to the conversation history
+	if err == nil && len(resp.Choices) > 0 {
+		conversationHistory = append(conversationHistory, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleAssistant,
+			Content: resp.Choices[0].Message.Content,
+		})
+	}
 
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
