@@ -20,7 +20,7 @@ Got it! I'll remember that blue is your favorite color. 😊
 Your favorite color is blue! 😊
 > 
 ```
-
+`ctl+d` or `quit` to quit.
 ## Install
 ```
 make install
